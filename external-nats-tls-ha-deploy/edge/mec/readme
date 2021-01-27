@@ -1,0 +1,13 @@
+route |grep default|awk '{print $8}' |awk -F "/" '{print $1}'
+ip addr |grep inet |grep -v inet6 |grep eth0|awk '{print $2}' |awk -F "/" '{print $1}'
+安装说明
+一：修改install.sh的必要参数
+二：edge创建/root/swarm目录，并将所有文件放在该目录下
+三：将swarm-edge.service 放置于/usr/lib/systemd/system/目录下
+四：
+systemctl reload swarm-edge.service
+systemctl enable swarm-edge.service
+systemctl start swarm-edge.service
+五：docker ps 检查nats 和streaming容器
+
+

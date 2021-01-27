@@ -1,0 +1,36 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: swarmmanager
+  namespace: nats
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: swarmmanager
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/edge
+                operator: DoesNotExist
+      #nodeSelector:
+      #  kubernetes.io/hostname: "node1"
+      serviceAccountName: swarmmanager
+      containers:
+      - name: swarmmanager
+        imagePullPolicy: Always
+        image: "10.121.8.58/swarm/swarmcertmanager:v1.0"
+        ports:
+        - containerPort: 9990
+          protocol: TCP
+        #volumeMounts:
+        #- name: kubeconfig
+         # mountPath: /etc/kube/
+      #volumes:
+      #- name: kubeconfig
+      #  configMap:
+       #   name: kubeconfig

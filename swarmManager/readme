@@ -1,0 +1,8 @@
+//create certificates
+curl -H "Content-Type:application/json" -H "Data_Type:msg" -X POST --data '{"tenant": "system"}' http://10.121.134.109:32009/api/v1/cert/tenant
+
+//get system certificates
+curl http://10.121.134.109:32009/api/v1/cert/tenant/system/mecid > config
+
+//get all registered mec
+curl http://10.121.115.21:32009/api/v1/mec

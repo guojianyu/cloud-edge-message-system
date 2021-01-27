@@ -1,0 +1,137 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: stan-mgmt
+  namespace: nats
+  labels:
+    app: stan
+spec:
+  selector:
+    app: stan
+  ports:
+  - name: monitor
+    port: 8222
+  - name: metrics
+    port: 7777
+  type: NodePort
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stan-config
+  namespace: nats
+data:
+  stan.conf: |
+    http: 8222
+
+    streaming {
+      id: test-cluster
+      store: file
+      dir: /data/stan/store
+      ft_group_name: "cloud-cluster"
+      file_options {
+          buffer_size: 32mb
+          sync_on_flush: false
+          slice_max_bytes: 512mb
+          parallel_recovery: 64
+      }
+      nats_server_url: "nats://nats.nats.svc:4222"
+      partitioning: true
+      store_limits {
+          channels: {
+           cloud.>: {}
+          }
+          max_channels: 0
+          max_msgs: 0
+          max_bytes: 256gb
+          max_subs: 0
+      }
+      tls: {
+      verify:   true
+      client_cert: "/etc/nats-client-tls-certs/tls.crt"
+      client_key: "/etc/nats-client-tls-certs/tls.key"
+      client_ca: "/etc/nats-client-tls-certs/ca.crt"
+     
+     }  
+    }
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: stan
+  namespace: nats
+  labels:
+    app: stan
+spec:
+  selector:
+    matchLabels:
+      app: stan
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: stan
+    spec:
+      # Prevent NATS Streaming pods running in same host.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/edge
+                operator: DoesNotExist
+      # STAN Server
+      containers:
+      - name: stan
+        image: registry.lenovo.com/base/nats-streaming:0.16.2
+        ports:
+        - containerPort: 8222
+          name: monitor
+        - containerPort: 7777
+          name: metrics
+        args:
+         - "-sc"
+         - "/etc/stan-config/stan.conf"
+
+        # Required to be able to define an environment variable
+        # that refers to other environment variables.  This env var
+        # is later used as part of the configuration file.
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+          - name: config-volume
+            mountPath: /etc/stan-config
+          - name: efs
+            mountPath: /data/stan
+          - mountPath: /etc/nats-client-tls-certs
+            name: ca-tls
+            readOnly: true
+
+        # Disable CPU limits.
+        resources:
+          requests:
+            cpu: 0
+
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8222
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: config-volume
+        configMap:
+          name: stan-config
+      - name: efs
+        persistentVolumeClaim:
+          claimName: pvc
+      - name: ca-tls
+        secret:
+          secretName: nats-streaming-leaf-tls

@@ -1,0 +1,21 @@
+集群内edge 名字不可以重复
+所有的nats 的clusterid必须一致
+
+安装部署：
+一：cert-manager （无需修改）
+kubectl create -f cert-manager
+
+二：nfs （需要搭建nfs 服务，然后修改nfs.yaml中的服务地址）
+kubectl   create -f nfs
+
+三：swarmmanager(证书下发服务)
+kubectl create -f swarmmanager
+
+四：cloud (云端消息系统)
+1：kubectl get cert -n nats 查看是否都为ready
+2：如果都为ready,kubectl create -f cloud
+
+五：接入mec
+1：集群云端暴露公网IP
+2:修改edge/mec/install.sh中的natsMasterIP指向云端
+3:sh install.sh

@@ -1,0 +1,124 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stan-config-leaf
+data:
+  stan.conf: |
+    http: 8222
+    streaming {
+      id: test-cluster
+      store: file
+      dir: /data/stan/store
+      ft_group_name: "edge1-cluster"
+      file_options {
+          buffer_size: 32mb
+          sync_on_flush: false
+          slice_max_bytes: 512mb
+          read_buffer_size:  64mb
+          parallel_recovery: 64
+      }
+      nats_server_url: nats://192.168.0.237:4222
+      partitioning: true
+      store_limits {
+          channels: {
+           edge1.>: {}
+          }
+          max_channels: 0
+          max_msgs: 0
+          max_bytes: 256gb
+          max_age: 24h
+          max_subs: 0
+      }
+
+    }
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: stan-leaf-0
+  labels:
+    app: stan-leaf
+spec:
+  # STAN Server
+  terminationGracePeriodSeconds: 30
+  nodeSelector:
+      kubernetes.io/hostname: "a81166f065-edge-idxc.novalocal"
+      #kubernetes.io/hostname: "a81166f065-gjyn2-lkss-1.novalocal"
+  hostname: stan-leaf-0
+  subdomain: stan-mgmt-leaf
+  containers:
+  - name: stan
+    image: nats-streaming:alpine
+    ports:
+    # In case of NATS embedded mode expose these ports
+    - containerPort: 4222
+      name: client
+    - containerPort: 6222
+      name: cluster
+    - containerPort: 8222
+      name: monitor
+    - containerPort: 7422
+      name: leafnodes
+    args:
+    - "-sc"
+    - "/etc/stan-config/stan.conf"
+
+    # Required to be able to define an environment variable
+    # that refers to other environment variables.  This env var
+    # is later used as part of the configuration file.
+    env:
+    - name: MY_NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+    - name: MY_NODE_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.hostIP
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+    - name: CLUSTER_ADVERTISE
+      value: $(POD_NAME).stan-leaf.$(POD_NAMESPACE).svc
+    volumeMounts:
+      - name: config-volume
+        mountPath: /etc/stan-config
+      - name: pvc
+        mountPath: /data/stan
+    resources:
+      requests:
+        cpu: 0
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 8222
+      initialDelaySeconds: 10
+      timeoutSeconds: 5
+  - name: metrics
+    image: synadia/prometheus-nats-exporter:0.5.0
+    args:
+    - -connz
+    - -routez
+    - -subz
+    - -varz
+    - -channelz
+    - -serverz
+    - http://localhost:8222
+    ports:
+    - containerPort: 7777
+      name: metrics
+  volumes:
+  - name: config-volume
+    configMap:
+      name: stan-config-leaf
+  - name: pvc
+    #persistentVolumeClaim:
+    #  claimName: pvc2
+    hostPath:
+      path: /data
+      type: Directory

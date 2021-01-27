@@ -1,0 +1,66 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: swarmmanager
+  namespace: nats
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  name: swarmmanager
+  namespace: nats
+rules:
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs:
+    - get
+    - list
+    - patch
+    - update
+    - watch
+
+  - apiGroups: [""]
+    resources: ["ingresses"]
+    verbs:
+    - get
+    - list
+    - patch
+    - update
+    - watch
+
+
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs:
+    - get
+    - list
+    - patch
+    - update
+    - watch
+
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs:
+    - create
+    - update
+    - patch
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind:  RoleBinding
+metadata:
+  name: swarmmanager
+  namespace: nats
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind:  Role
+  name: swarmmanager
+subjects:
+- kind: ServiceAccount
+  name: swarmmanager
+  namespace: nats

@@ -1,0 +1,112 @@
+apiVersion: cert-manager.io/v1alpha2
+kind: ClusterIssuer
+metadata:
+  name: selfsigning
+  namespace: nats
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: nats-ca
+  namespace: nats
+spec:
+  secretName: nats-ca
+  duration: 8736h # 1 year
+  renewBefore: 240h # 10 days
+  issuerRef:
+    name: selfsigning
+    kind: ClusterIssuer
+  commonName: nats-ca
+  usages:
+  - cert sign
+  organization:
+  - Your organization
+  isCA: true
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata:
+  name: nats-ca
+  namespace: nats
+spec:
+  ca:
+    secretName: nats-ca
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: nats-server-tls
+  namespace: nats
+spec:
+  secretName: nats-server-tls
+  duration: 8736h # 90 days
+  renewBefore: 240h # 10 days
+  issuerRef:
+    name: nats-ca
+    kind: Issuer
+  usages:
+  - signing
+  - key encipherment
+  - server auth
+  organization:
+  - Your organization
+  commonName: nats.default.svc
+  dnsNames:
+  - nats.nats.svc
+  #ipAddresses:
+  #- 10.121.115.21
+  #- 0.0.0.0
+  #- 127.0.0.1
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: nats-routes-tls
+  namespace: nats
+spec:
+  secretName: nats-routes-tls
+  duration: 8736h # 90 days
+  renewBefore: 240h # 10 days
+  issuerRef:
+    name: nats-ca
+    kind: Issuer
+  usages:
+  - signing
+  - key encipherment
+  - server auth
+  - client auth
+  organization:
+  - Your organization
+  commonName: "*.nats-mgmt.nats.svc.cluster.local"
+  dnsNames:
+  - "*.nats-mgmt.nats.svc.cluster.local"
+  #ipAddresses:
+  #- 10.121.115.21
+
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: nats-streaming-leaf-tls
+  namespace: nats
+spec:
+  secretName: nats-streaming-leaf-tls
+  duration: 8736h # 90 days
+  renewBefore: 240h # 10 days
+  issuerRef:
+    name: nats-ca
+    kind: Issuer
+  usages:
+  - signing
+  - client auth
+  organization:
+  - Your organization
+  dnsNames:
+  - nats.nats.svc
+  #ipAddresses:
+  #- 10.121.115.21
+  #- 0.0.0.0
+  #- 127.0.0.1
+

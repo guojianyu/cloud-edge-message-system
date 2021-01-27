@@ -1,0 +1,80 @@
+apiVersion: cert-manager.io/v1alpha2
+kind: ClusterIssuer
+metadata:
+  name: edgesigning
+  namespace: nats
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: edge-nats-ca
+  namespace: nats
+spec:
+  secretName: edge-nats-ca
+  duration: 8736h # 1 year
+  renewBefore: 240h # 10 days
+  issuerRef:
+    name: edgesigning
+    kind: ClusterIssuer
+  commonName: edge-nats-ca
+  usages:
+  - cert sign
+  organization:
+  - Your organization
+  isCA: true
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata:
+  name: edge-nats-ca
+  namespace: nats
+spec:
+  ca:
+    secretName: edge-nats-ca
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: edge-nats-server-tls
+  namespace: nats
+spec:
+  secretName: edge-nats-server-tls
+  duration: 8736h # 90 days
+  renewBefore: 240h # 10 days
+  issuerRef:
+    name: edge-nats-ca
+    kind: Issuer
+  usages:
+  - signing
+  - key encipherment
+  - server auth
+  organization:
+  - Your organization
+  commonName: nats-leaf.nats.svc
+  dnsNames:
+  - nats-leaf.nats.svc
+
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: edge-nats-client-tls
+  namespace: nats
+spec:
+  secretName: edge-nats-client-tls
+  duration: 8736h # 90 days
+  renewBefore: 240h # 10 days
+  issuerRef:
+    name: edge-nats-ca
+    kind: Issuer
+  usages:
+  - signing
+  - client auth
+  organization:
+  - Your organization
+  dnsNames:
+  - nats-leaf.nats.svc
+
+

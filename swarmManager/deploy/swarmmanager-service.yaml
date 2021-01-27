@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: swarmmanager
+  namespace: nats
+spec:
+  ports:
+  - nodePort: 32009
+    port: 9990
+    protocol: TCP
+    targetPort: 9990
+  selector:
+    app: swarmmanager
+  sessionAffinity: None
+  type: NodePort

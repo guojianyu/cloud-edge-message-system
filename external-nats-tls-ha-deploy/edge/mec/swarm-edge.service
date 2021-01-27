@@ -1,0 +1,23 @@
+[Unit]
+
+Description=My-demo Service                                                                                   
+
+[Service]
+
+Type=simple
+
+PIDFile=/run/daemon.pid
+
+ExecStart=/bin/bash /root/swarm/daemon.sh
+
+ExecReload=/bin/kill -s HUP $MAINPID
+
+ExecStop=/bin/kill -s QUIT $MAINPID
+
+PrivateTmp=true
+
+Restart=on-failure
+
+[Install]
+
+WantedBy=multi-user.target
